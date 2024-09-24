@@ -1,6 +1,5 @@
 import * as THREE from 'https://threejs.org/build/three.module.js';
 
-
 export function createLighting(scene) {
     // Directional light (simulates sunlight)
     const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
