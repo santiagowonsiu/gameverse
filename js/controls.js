@@ -1,7 +1,7 @@
-export function addControls(THREE, camera, mainCharacter) {
+export function addControls(THREE, camera, mainCharacter, world) {
     const movementSpeed = 10;    // Speed while on the ground
     const jumpVelocity = 4;      // Initial jump velocity
-    const gravity = 0.008;       // Gravity pulling down
+    const gravity = 0.1 ;       // Gravity pulling down
     const sphereRadius = 1;      // The radius of the character sphere
 
     let isJumping = false;       // Jumping state
@@ -10,15 +10,11 @@ export function addControls(THREE, camera, mainCharacter) {
     let moveBackward = false;
     let moveLeft = false;
     let moveRight = false;
-    let canMove = true;          // Boolean flag to determine if movement is allowed
-
-    // Throttled logging flags
-    let jumpLogged = false;
-    let landLogged = false;
+    let onSurface = false;       // Boolean flag to track whether the character is on a surface
 
     // Keydown event listener
     document.addEventListener('keydown', (event) => {
-        if (canMove) {  // Only allow movement keys if movement is enabled
+        if (onSurface) {  // Only allow movement keys if character is on a surface
             if (event.code === 'ArrowUp') moveForward = true;
             if (event.code === 'ArrowDown') moveBackward = true;
             if (event.code === 'ArrowLeft') moveLeft = true;
@@ -26,13 +22,11 @@ export function addControls(THREE, camera, mainCharacter) {
         }
 
         // Jump logic for spacebar
-        if (event.code === 'Space' && !isJumping && mainCharacter.body.position.y <= sphereRadius + 0.01) {
+        if (event.code === 'Space' && onSurface) {
             velocityY = jumpVelocity;  // Apply jump velocity
             isJumping = true;          // Set jumping state
-            canMove = false;           // Disable movement while jumping
+            onSurface = false;         // Character is now off the surface
             console.log("Jump initiated: velocityY =", velocityY);
-            jumpLogged = true;
-            landLogged = false;
         }
     });
 
@@ -44,10 +38,20 @@ export function addControls(THREE, camera, mainCharacter) {
         if (event.code === 'ArrowRight') moveRight = false;
     });
 
+    // Detect landing using collision events
+    mainCharacter.body.addEventListener('collide', (event) => {
+        // When the character collides with any surface, allow movement and jumping
+        if (isJumping) {
+            isJumping = false;       // Reset jumping state
+            velocityY = 0;           // Reset vertical velocity
+        }
+        onSurface = true;            // Character is now on a surface
+        console.log("Character landed on a surface:", event.body);
+    });
+
     // Update function for character movement and camera tracking
     function updateCharacter() {
-        if (!isJumping) {
-            // Movement logic ONLY when on the ground
+        if (onSurface && !isJumping) {
             let directionX = 0;
             let directionZ = 0;
 
@@ -72,31 +76,12 @@ export function addControls(THREE, camera, mainCharacter) {
                 mainCharacter.body.velocity.x = 0;
                 mainCharacter.body.velocity.z = 0;
             }
-        } else {
-            if (jumpLogged && !landLogged) {
-                console.log("In the air - applying gravity and inertia");
-                jumpLogged = false;  // Ensure jump is logged once
-            }
+        }
 
-            // Apply gravity to vertical velocity
+        // Apply gravity when the character is in the air
+        if (!onSurface || isJumping) {
             velocityY -= gravity;
             mainCharacter.body.velocity.y = velocityY;
-
-            // Maintain horizontal inertia while in the air
-            mainCharacter.body.velocity.x = mainCharacter.body.velocity.x;
-            mainCharacter.body.velocity.z = mainCharacter.body.velocity.z;
-
-            // Check if the character has landed
-            if (mainCharacter.body.position.y <= sphereRadius) {
-                mainCharacter.body.position.y = sphereRadius;  // Place the character at ground level
-                isJumping = false;                            // Reset jumping state
-                canMove = true;                               // Re-enable movement after landing
-                velocityY = 0;                                // Reset vertical velocity after landing
-                if (!landLogged) {
-                    console.log("Character landed");
-                    landLogged = true;  // Log landing only once
-                }
-            }
         }
 
         // Camera tracking logic
