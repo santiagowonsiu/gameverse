@@ -1,15 +1,16 @@
-import * as THREE from 'https://threejs.org/build/three.module.js';
+import * as THREE from 'three';
 
-export function animate(scene, camera, renderer, controls, character) {
+export function animate(scene, camera, renderer, controls) {
     function renderFrame() {
         requestAnimationFrame(renderFrame);  // Request the next frame
 
-        // Update character movement (from controls.js)
-        controls.updateCharacter(character);
+        // Update character movement and camera following the character
+        controls.updateCharacter();
 
         // Render the scene from the camera's perspective
         renderer.render(scene, camera);
     }
-    
+
     renderFrame();  // Start the animation loop
 }
+

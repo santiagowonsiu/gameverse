@@ -1,3 +1,5 @@
+import * as THREE from 'three';
+
 export function addControls(camera, character) {
     const movementSpeed = 0.1;
     const jumpVelocity = 0.2;
@@ -19,11 +21,10 @@ export function addControls(camera, character) {
         if (event.code === 'ArrowDown') moveBackward = true;
         if (event.code === 'ArrowLeft') moveLeft = true;
         if (event.code === 'ArrowRight') moveRight = true;
-        
+
         // Jump logic for spacebar
-        if (event.code === 'Space' && !isJumping && character.position.y === groundLevel) {  
-            console.log('Spacebar pressed, starting jump');  // Debugging statement
-            velocityY = jumpVelocity;  // Apply upward velocity
+        if (event.code === 'Space' && !isJumping && character.position.y === groundLevel) {
+            velocityY = jumpVelocity;
             isJumping = true;
         }
     });
@@ -36,31 +37,30 @@ export function addControls(camera, character) {
         if (event.code === 'ArrowRight') moveRight = false;
     });
 
-    // Update function for movement and jumping
+    // Update function for character movement and camera tracking
     function updateCharacter() {
-        // Log the sphere's position to the console
-        console.log('Sphere Position:', character.position);  // Log sphere position every frame
-        
-        // Movement logic: positive `x` is to the right, positive `z` is forward
-        if (moveForward) character.position.z -= movementSpeed;  // Move forward along the z-axis (negative z direction)
-        if (moveBackward) character.position.z += movementSpeed;  // Move backward along the z-axis (positive z direction)
-        if (moveLeft) character.position.x -= movementSpeed;  // Move left along the x-axis (negative x direction)
-        if (moveRight) character.position.x += movementSpeed;  // Move right along the x-axis (positive x direction)
+        // Movement logic
+        if (moveForward) character.position.z -= movementSpeed;
+        if (moveBackward) character.position.z += movementSpeed;
+        if (moveLeft) character.position.x -= movementSpeed;
+        if (moveRight) character.position.x += movementSpeed;
 
         // Handle jumping and gravity
         if (isJumping) {
-            console.log('Jumping... Position Y:', character.position.y, 'Velocity Y:', velocityY);  // Debugging statement
-            character.position.y += velocityY;  // Move character upwards
-            velocityY -= gravity;  // Gravity decreases the upward velocity
-
-            // Stop at the ground level (sphere's bottom shouldn't pass the plane)
+            character.position.y += velocityY;
+            velocityY -= gravity;
             if (character.position.y <= groundLevel) {
-                console.log('Landed on the ground');  // Debugging statement
-                character.position.y = groundLevel;  // Place at ground level
-                isJumping = false;  // Stop jumping
-                velocityY = 0;  // Reset the velocity for the next jump
+                character.position.y = groundLevel;
+                isJumping = false;
+                velocityY = 0;
             }
         }
+
+        // Camera tracking logic
+        const cameraOffset = new THREE.Vector3(0, 5, 15);  // Camera follows from behind and above
+        const newCameraPosition = character.position.clone().add(cameraOffset);
+        camera.position.copy(newCameraPosition);
+        camera.lookAt(character.position);  // Ensure the camera looks at the character
     }
 
     return { updateCharacter };
