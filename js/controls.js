@@ -1,6 +1,6 @@
 export function addControls(THREE, camera, mainCharacter, world) {
     const movementSpeed = 10;    // Speed while on the ground
-    const jumpVelocity = 4;      // Initial jump velocity
+    const jumpVelocity = 6;      // Initial jump velocity
     const gravity = 0.1 ;       // Gravity pulling down
     const sphereRadius = 1;      // The radius of the character sphere
 

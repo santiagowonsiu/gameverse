@@ -2,22 +2,33 @@ import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 
 export function createMainCharacter(scene, world) {
-    // Create Three.js sphere
-    const sphereGeometry = new THREE.SphereGeometry(1, 32, 32);  // Sphere with radius 1
-    const sphereMaterial = new THREE.MeshStandardMaterial({ color: 0x0077ff });  // Blue color for the sphere
+    const sphereRadius = 1;
+
+    // Three.js sphere for visual representation
+    const sphereGeometry = new THREE.SphereGeometry(sphereRadius, 32, 32);
+    const sphereMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
     const sphereMesh = new THREE.Mesh(sphereGeometry, sphereMaterial);
-    sphereMesh.position.set(0, 5, 0);  // Initial position
     scene.add(sphereMesh);
 
-    // Create Cannon.js sphere (physics body)
-    const sphereShape = new CANNON.Sphere(1);  // Match radius with Three.js sphere
+    // Cannon.js body for physics
+    const sphereShape = new CANNON.Sphere(sphereRadius);
     const sphereBody = new CANNON.Body({
-        mass: 1,  // Dynamic body (affected by gravity and forces)
-        position: new CANNON.Vec3(0, 5, 0),  // Initial position
-        shape: sphereShape
+        mass: 1,  // Set mass for the character
+        position: new CANNON.Vec3(0, 10, 0),  // Initial position
+        shape: sphereShape,
     });
+
+    // Increase linear damping for stronger air resistance
+    sphereBody.linearDamping = 0.6;  // Increase damping by 3x
+
+    // Optional: you can also adjust angularDamping for rotational drag
+    sphereBody.angularDamping = 0.2;
+
+    // Add the body to the physics world
     world.addBody(sphereBody);
 
-    // Return both the Three.js mesh and Cannon.js body
-    return { mesh: sphereMesh, body: sphereBody };
+    return {
+        mesh: sphereMesh,
+        body: sphereBody,
+    };
 }
