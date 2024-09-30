@@ -1,35 +1,42 @@
-import * as THREE from 'three';
+export function addControls(THREE, camera, mainCharacter) {
+    const movementSpeed = 10;    // Speed while on the ground
+    const jumpVelocity = 4;      // Initial jump velocity
+    const gravity = 0.008;       // Gravity pulling down
+    const sphereRadius = 1;      // The radius of the character sphere
 
-export function addControls(camera, character) {
-    const movementSpeed = 0.1;
-    const jumpVelocity = 0.2;
-    let isJumping = false;
-    let velocityY = 0;
-    const gravity = 0.01;
-
-    const sphereRadius = 0.5;  // Radius of the sphere (character)
-    const groundLevel = sphereRadius;  // Ground level (where the sphere should rest)
-
+    let isJumping = false;       // Jumping state
+    let velocityY = 0;           // Initial vertical velocity
     let moveForward = false;
     let moveBackward = false;
     let moveLeft = false;
     let moveRight = false;
+    let canMove = true;          // Boolean flag to determine if movement is allowed
+
+    // Throttled logging flags
+    let jumpLogged = false;
+    let landLogged = false;
 
     // Keydown event listener
     document.addEventListener('keydown', (event) => {
-        if (event.code === 'ArrowUp') moveForward = true;
-        if (event.code === 'ArrowDown') moveBackward = true;
-        if (event.code === 'ArrowLeft') moveLeft = true;
-        if (event.code === 'ArrowRight') moveRight = true;
+        if (canMove) {  // Only allow movement keys if movement is enabled
+            if (event.code === 'ArrowUp') moveForward = true;
+            if (event.code === 'ArrowDown') moveBackward = true;
+            if (event.code === 'ArrowLeft') moveLeft = true;
+            if (event.code === 'ArrowRight') moveRight = true;
+        }
 
         // Jump logic for spacebar
-        if (event.code === 'Space' && !isJumping && character.position.y === groundLevel) {
-            velocityY = jumpVelocity;
-            isJumping = true;
+        if (event.code === 'Space' && !isJumping && mainCharacter.body.position.y <= sphereRadius + 0.01) {
+            velocityY = jumpVelocity;  // Apply jump velocity
+            isJumping = true;          // Set jumping state
+            canMove = false;           // Disable movement while jumping
+            console.log("Jump initiated: velocityY =", velocityY);
+            jumpLogged = true;
+            landLogged = false;
         }
     });
 
-    // Keyup event listener
+    // Keyup event listener to stop movement
     document.addEventListener('keyup', (event) => {
         if (event.code === 'ArrowUp') moveForward = false;
         if (event.code === 'ArrowDown') moveBackward = false;
@@ -39,28 +46,64 @@ export function addControls(camera, character) {
 
     // Update function for character movement and camera tracking
     function updateCharacter() {
-        // Movement logic
-        if (moveForward) character.position.z -= movementSpeed;
-        if (moveBackward) character.position.z += movementSpeed;
-        if (moveLeft) character.position.x -= movementSpeed;
-        if (moveRight) character.position.x += movementSpeed;
+        if (!isJumping) {
+            // Movement logic ONLY when on the ground
+            let directionX = 0;
+            let directionZ = 0;
 
-        // Handle jumping and gravity
-        if (isJumping) {
-            character.position.y += velocityY;
+            if (moveForward) directionZ -= 1;
+            if (moveBackward) directionZ += 1;
+            if (moveLeft) directionX -= 1;
+            if (moveRight) directionX += 1;
+
+            // Normalize the direction vector to prevent diagonal speed increase
+            const length = Math.sqrt(directionX * directionX + directionZ * directionZ);
+            if (length > 0) {
+                directionX /= length;
+                directionZ /= length;
+            }
+
+            // Apply the normalized movement speed to the velocities
+            mainCharacter.body.velocity.x = directionX * movementSpeed;
+            mainCharacter.body.velocity.z = directionZ * movementSpeed;
+
+            // Stop movement if no direction is pressed
+            if (length === 0) {
+                mainCharacter.body.velocity.x = 0;
+                mainCharacter.body.velocity.z = 0;
+            }
+        } else {
+            if (jumpLogged && !landLogged) {
+                console.log("In the air - applying gravity and inertia");
+                jumpLogged = false;  // Ensure jump is logged once
+            }
+
+            // Apply gravity to vertical velocity
             velocityY -= gravity;
-            if (character.position.y <= groundLevel) {
-                character.position.y = groundLevel;
-                isJumping = false;
-                velocityY = 0;
+            mainCharacter.body.velocity.y = velocityY;
+
+            // Maintain horizontal inertia while in the air
+            mainCharacter.body.velocity.x = mainCharacter.body.velocity.x;
+            mainCharacter.body.velocity.z = mainCharacter.body.velocity.z;
+
+            // Check if the character has landed
+            if (mainCharacter.body.position.y <= sphereRadius) {
+                mainCharacter.body.position.y = sphereRadius;  // Place the character at ground level
+                isJumping = false;                            // Reset jumping state
+                canMove = true;                               // Re-enable movement after landing
+                velocityY = 0;                                // Reset vertical velocity after landing
+                if (!landLogged) {
+                    console.log("Character landed");
+                    landLogged = true;  // Log landing only once
+                }
             }
         }
 
         // Camera tracking logic
-        const cameraOffset = new THREE.Vector3(0, 5, 15);  // Camera follows from behind and above
-        const newCameraPosition = character.position.clone().add(cameraOffset);
+        const cameraOffset = new THREE.Vector3(0, 5, 15);
+        const newCameraPosition = mainCharacter.mesh.position.clone().add(cameraOffset);
         camera.position.copy(newCameraPosition);
-        camera.lookAt(character.position);  // Ensure the camera looks at the character
+        camera.lookAt(mainCharacter.mesh.position);
     }
 
     return { updateCharacter };

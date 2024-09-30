@@ -1,53 +1,51 @@
 import * as THREE from 'three';
-import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader.js';
-import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
+import * as CANNON from 'cannon-es';
+import { createObstacles } from './obstacles.js';
+import { createMainCharacter } from './mainCharacter.js';
 
 export function createScene() {
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x87ceeb);  // Sky blue background
 
-    // Load the OBJ and MTL files
-    const mtlLoader = new MTLLoader();
-    // mtlLoader.load('assets/materials/gray_rocks_4k.blend/ImageToStl.com_gray_rocks_4k/gray_rocks_4k.mtl', function (materials) {
-    //     materials.preload();  // Preload the materials
+    // Create physics world
+    const world = new CANNON.World();
+    world.gravity.set(0, -9.82, 0);  // Gravity in the y-axis
 
-    //     const objLoader = new OBJLoader();
-    //     objLoader.setMaterials(materials);
-    //     objLoader.load('assets/materials/gray_rocks_4k.blend/ImageToStl.com_gray_rocks_4k/ImageToStl.com_gray_rocks_4k.obj', function (object) {
-    //         console.log("OBJ model loaded");
-    //         object.position.set(0, 0, 0);  // Adjust position if necessary
-    //         scene.add(object);
-    //     }, undefined, function (error) {
-    //         console.error("Error loading OBJ file:", error);
-    //     });
-    // }, undefined, function (error) {
-    //     console.error("Error loading MTL file:", error);
-    // });
-
-    // Optional: Keep the plane with diffuse texture
+    // Load textures for the plane
     const textureLoader = new THREE.TextureLoader();
     const diffuseTexture = textureLoader.load('assets/materials/gray_rocks_4k.blend/textures/gray_rocks_diff_4k.jpg');
     const normalMap = textureLoader.load('assets/materials/gray_rocks_4k.blend/textures/gray_rocks_nor_gl_4k.exr');
     const roughnessMap = textureLoader.load('assets/materials/gray_rocks_4k.blend/textures/gray_rocks_nor_gl_4k.exr');
 
-    // Ensure the diffuse texture repeats across the plane
-    diffuseTexture.wrapS = THREE.RepeatWrapping;
-    diffuseTexture.wrapT = THREE.RepeatWrapping;
-    diffuseTexture.repeat.set(5, 5);  // Adjust the texture tiling as needed
-
+    // Configure the plane geometry and material
     const planeGeometry = new THREE.PlaneGeometry(100, 100);
     const planeMaterial = new THREE.MeshStandardMaterial({
-        map: diffuseTexture,          // Diffuse map (color)
-        normalMap: normalMap,         // Normal map for bump details
-        roughnessMap: roughnessMap,   // Roughness map for surface reflections
-        roughness: 1,                 // Adjust for how shiny or matte the surface is (0 = shiny, 1 = matte)
-        metalness: 0.0,               // Adjust metalness if needed
+        map: diffuseTexture, 
+        normalMap: normalMap, 
+        roughnessMap: roughnessMap, 
+        roughness: 1,
+        metalness: 0.0,
     });
 
-    const plane = new THREE.Mesh(planeGeometry, planeMaterial);
-    plane.rotation.x = -Math.PI / 2;  // Rotate the plane to be horizontal
-    plane.position.y = -0.1;  // Place it slightly below the model
-    scene.add(plane);
+    // Create and position the plane
+    const planeMesh = new THREE.Mesh(planeGeometry, planeMaterial);
+    planeMesh.rotation.x = -Math.PI / 2;
+    planeMesh.position.y = -0.1;
+    scene.add(planeMesh);
 
-    return scene;
+    // Create the physics body for the plane
+    const groundShape = new CANNON.Plane();
+    const groundBody = new CANNON.Body({ mass: 0 });  // Static plane (mass = 0)
+    groundBody.addShape(groundShape);
+    groundBody.position.set(0, -0.1, 0);
+    groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
+    world.addBody(groundBody);
+
+    // Add obstacles to the scene and world
+    createObstacles(scene, world);
+
+    // Add the main character (sphere) to the scene and world
+    const mainCharacter = createMainCharacter(scene, world);
+
+    return { scene, world, mainCharacter };  // Return the main character along with the scene and world
 }
